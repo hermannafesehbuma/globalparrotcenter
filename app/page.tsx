@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -25,15 +26,36 @@ import {
   CheckCircle,
   Award,
   Mail,
+  Loader2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { products } from '@/lib/data';
+import { getFeaturedProducts } from '@/lib/api/products';
+import { ProductWithCategory } from '@/lib/database.types';
 import { AgeSafetyWidget } from '@/components/age-safety-widget';
 
-const featuredProducts = products.slice(0, 3);
-
 export default function Home() {
+  const [featuredProducts, setFeaturedProducts] = useState<
+    ProductWithCategory[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadFeaturedProducts();
+  }, []);
+
+  const loadFeaturedProducts = async () => {
+    try {
+      setLoading(true);
+      const products = await getFeaturedProducts(3);
+      setFeaturedProducts(products);
+    } catch (error) {
+      console.error('Error loading featured products:', error);
+      setFeaturedProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -107,67 +129,95 @@ export default function Home() {
           </p>
         </motion.div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {featuredProducts.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative h-64 w-full bg-muted">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{product.name}</CardTitle>
-                      <CardDescription className="mt-1">
-                        {product.category.name}
-                      </CardDescription>
-                    </div>
-                    <span className="text-2xl font-bold text-primary">
-                      ${product.price}
-                    </span>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2 text-muted-foreground">
+              Loading featured parrots...
+            </span>
+          </div>
+        ) : featuredProducts.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <p>No featured parrots available at the moment.</p>
+            <Button asChild className="mt-4" variant="outline">
+              <Link href="/products">Browse All Parrots</Link>
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {featuredProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="relative h-64 w-full bg-muted">
+                    {product.image_urls && product.image_urls.length > 0 ? (
+                      <Image
+                        src={product.image_urls[0]}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No Image
+                      </div>
+                    )}
                   </div>
-                  <AgeSafetyWidget
-                    category={product.category}
-                    className="mt-2"
-                  />
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {product.description}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {product.highlights.slice(0, 3).map((highlight) => (
-                      <span
-                        key={highlight}
-                        className="rounded-full bg-pink-100 px-3 py-1 text-xs font-medium text-pink-700 dark:bg-pink-900 dark:text-pink-300"
-                      >
-                        {highlight}
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle>{product.name}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {product.category?.name || 'Uncategorized'}
+                        </CardDescription>
+                      </div>
+                      <span className="text-2xl font-bold text-primary">
+                        ${product.price.toFixed(2)}
                       </span>
-                    ))}
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button asChild className="w-full" variant="outline">
-                    <Link href={`/products/${product.id}`}>
-                      View Details <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
+                    </div>
+                    {product.category && (
+                      <AgeSafetyWidget
+                        category={{
+                          id: product.category.id,
+                          name: product.category.name,
+                          slug:
+                            product.category.name
+                              ?.toLowerCase()
+                              .replace(/\s+/g, '-') || '',
+                          minAge: 0,
+                          description: product.category.description || '',
+                        }}
+                        className="mt-2"
+                      />
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {product.description || 'No description available'}
+                    </p>
+                    {product.age && (
+                      <div className="mt-4 text-xs text-muted-foreground">
+                        Age: {product.age} months
+                      </div>
+                    )}
+                  </CardContent>
+                  <CardFooter>
+                    <Button asChild className="w-full" variant="outline">
+                      <Link href={`/products/${product.id}`}>
+                        View Details <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Quick Links */}
@@ -502,7 +552,7 @@ export default function Home() {
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" className="w-full">
-                <Link href="/community">Read Full Story</Link>
+                <Link href="/charlie">Read Full Story <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </CardFooter>
           </Card>

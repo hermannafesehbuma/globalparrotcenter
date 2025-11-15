@@ -39,7 +39,7 @@ export default function PrivacyPage() {
           <CardContent className="space-y-4 text-muted-foreground">
             <p>We may collect information about you in a variety of ways:</p>
             <ul className="list-disc list-inside space-y-2 ml-4">
-              <li>Personal information (name, email, phone, address) when you make a purchase or contact us</li>
+              <li>Personal information (name, email, address) when you make a purchase or contact us</li>
               <li>Payment information processed through secure third-party payment processors</li>
               <li>Account information if you create a profile on our platform</li>
               <li>Usage data and analytics when you interact with our website</li>
@@ -159,7 +159,7 @@ export default function PrivacyPage() {
               If you have any questions about this Privacy Policy, please contact us at:
             </p>
             <p>
-              <strong>Email:</strong> contact@globalparrotcenter.com
+              <strong>Email:</strong> parrotlovers04@gmail.com
             </p>
           </CardContent>
         </Card>

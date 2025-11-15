@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Heart, Shield, Users, Mail, Phone, MapPin, ChevronDown } from "lucide-react";
+import { Heart, Shield, Users, Mail, MapPin, ChevronDown } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -162,17 +162,7 @@ export default function AboutPage() {
               <CardTitle>Email</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">contact@globalparrotcenter.com</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Phone className="h-8 w-8 text-primary mb-2" />
-              <CardTitle>Phone</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">(555) 123-4567</p>
+              <p className="text-muted-foreground">parrotlovers04@gmail.com</p>
             </CardContent>
           </Card>
 

@@ -42,16 +42,10 @@ export interface Database {
           name: string
           description: string | null
           price: number
-          image_url: string | null
+          image_urls: string[] | null
           age: number | null
-          gender: 'male' | 'female' | 'unknown'
-          temperament: string | null
-          care_level: string | null
-          size: string | null
-          popularity: number
-          highlights: string[] | null
+          gender: 'male' | 'female' | 'pairs' | null
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: number
@@ -59,16 +53,10 @@ export interface Database {
           name: string
           description?: string | null
           price: number
-          image_url?: string | null
+          image_urls?: string[] | null
           age?: number | null
-          gender?: 'male' | 'female' | 'unknown'
-          temperament?: string | null
-          care_level?: string | null
-          size?: string | null
-          popularity?: number
-          highlights?: string[] | null
+          gender?: 'male' | 'female' | 'pairs' | null
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: number
@@ -76,16 +64,10 @@ export interface Database {
           name?: string
           description?: string | null
           price?: number
-          image_url?: string | null
+          image_urls?: string[] | null
           age?: number | null
-          gender?: 'male' | 'female' | 'unknown'
-          temperament?: string | null
-          care_level?: string | null
-          size?: string | null
-          popularity?: number
-          highlights?: string[] | null
+          gender?: 'male' | 'female' | 'pairs' | null
           created_at?: string
-          updated_at?: string
         }
       }
       orders: {

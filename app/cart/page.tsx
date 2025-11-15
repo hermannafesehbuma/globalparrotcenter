@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Trash2, ShoppingCart, ArrowRight, Minus, Plus } from "lucide-react";
+import { Trash2, ShoppingCart, ArrowRight } from "lucide-react";
 import { useCart } from "@/contexts/cart-context";
 import { AgeSafetyWidget } from "@/components/age-safety-widget";
 import { categories } from "@/lib/data";
@@ -72,7 +72,7 @@ export default function CartPage() {
                     <div className="flex gap-4">
                       <div className="relative h-24 w-24 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                         <Image
-                          src={item.product.image_url || "/api/placeholder/200/200"}
+                          src={item.product.image_urls && item.product.image_urls.length > 0 ? item.product.image_urls[0] : "/api/placeholder/200/200"}
                           alt={item.product.name}
                           fill
                           className="object-cover"
@@ -92,23 +92,9 @@ export default function CartPage() {
                         </p>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className="w-12 text-center font-medium">
-                              {item.quantity}
+                            <span className="text-sm text-muted-foreground">
+                              Quantity: {item.quantity}
                             </span>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
                           </div>
                           <div className="flex items-center gap-4">
                             <span className="text-lg font-bold">

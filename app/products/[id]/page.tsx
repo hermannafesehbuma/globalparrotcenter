@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState, useEffect } from "react";
 import { notFound } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -10,11 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Share2, Heart, ShoppingCart, ArrowLeft, CheckCircle } from "lucide-react";
-import { products } from "@/lib/data";
+import { Share2, Heart, ShoppingCart, ArrowLeft, Loader2 } from "lucide-react";
+import { getProductById } from "@/lib/api/products";
+import { ProductWithCategory } from "@/lib/database.types";
 import { AgeSafetyWidget } from "@/components/age-safety-widget";
 import { useCart } from "@/contexts/cart-context";
-import { useState } from "react";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -24,33 +24,69 @@ interface ProductDetailPageProps {
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   const { id } = use(params);
-  const product = products.find((p) => p.id === parseInt(id));
   const { addToCart } = useCart();
+  const [product, setProduct] = useState<ProductWithCategory | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
 
-  if (!product) {
+  useEffect(() => {
+    loadProduct();
+  }, [id]);
+
+  const loadProduct = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const productId = parseInt(id);
+      if (isNaN(productId)) {
+        setError("Invalid product ID");
+        return;
+      }
+      const data = await getProductById(productId);
+      if (!data) {
+        setError("Product not found");
+        return;
+      }
+      setProduct(data);
+    } catch (err) {
+      console.error("Error loading product:", err);
+      setError("Failed to load product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Loading product...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !product) {
     notFound();
   }
 
   const handleAddToCart = () => {
-    // Convert product to match database Product type
+    // Product already matches database schema
     const dbProduct = {
       id: product.id,
       name: product.name,
-      category_id: product.categoryId,
-      description: product.description,
+      category_id: product.category_id,
+      description: product.description || null,
       price: product.price,
-      image_url: product.image,
-      age: null,
-      gender: "unknown" as const,
-      temperament: product.temperament,
-      care_level: product.careLevel,
-      size: product.size,
-      popularity: product.popularity,
-      highlights: product.highlights,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      image_urls: product.image_urls || null,
+      age: product.age || null,
+      gender: product.gender || null,
+      created_at: product.created_at,
     };
 
     addToCart(dbProduct, quantity);
@@ -75,16 +111,22 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           transition={{ duration: 0.5 }}
         >
           <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-muted">
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              className="object-cover"
-            />
+            {product.image_urls && product.image_urls.length > 0 ? (
+              <Image
+                src={product.image_urls[0]}
+                alt={product.name}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No Image
+              </div>
+            )}
           </div>
-          {product.images && product.images.length > 1 && (
+          {product.image_urls && product.image_urls.length > 1 && (
             <div className="mt-4 grid grid-cols-4 gap-4">
-              {product.images.map((img, index) => (
+              {product.image_urls.map((img, index) => (
                 <div
                   key={index}
                   className="relative aspect-square overflow-hidden rounded-lg bg-muted"
@@ -106,59 +148,61 @@ export default function ProductDetailPage({ params }: ProductDetailPageProps) {
           <div>
             <div className="flex items-start justify-between mb-2">
               <h1 className="text-4xl font-bold">{product.name}</h1>
-              <span className="text-4xl font-bold text-primary">${product.price}</span>
+              <span className="text-4xl font-bold text-primary">${product.price.toFixed(2)}</span>
             </div>
-            <p className="text-lg text-muted-foreground">{product.category.name}</p>
-            <AgeSafetyWidget category={product.category} className="mt-4" />
+            <p className="text-lg text-muted-foreground">
+              {product.category?.name || "Uncategorized"}
+            </p>
+            {product.category && (
+              <AgeSafetyWidget
+                category={{
+                  id: product.category.id,
+                  name: product.category.name,
+                  slug: product.category.name?.toLowerCase().replace(/\s+/g, '-') || '',
+                  minAge: 0,
+                  description: product.category.description || ''
+                }}
+                className="mt-4"
+              />
+            )}
           </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Description</h2>
-            <p className="text-muted-foreground">{product.description}</p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Temperament</h2>
-            <p className="text-muted-foreground">{product.temperament}</p>
-          </div>
-
-          <div>
-            <h2 className="text-xl font-semibold mb-3">Highlights</h2>
-            <div className="flex flex-wrap gap-2">
-              {product.highlights.map((highlight) => (
-                <Badge key={highlight} variant="secondary" className="text-sm py-1 px-3">
-                  <CheckCircle className="mr-1 h-3 w-3" />
-                  {highlight}
-                </Badge>
-              ))}
+          {product.description && (
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Description</h2>
+              <p className="text-muted-foreground">{product.description}</p>
             </div>
-          </div>
+          )}
 
           <Card>
             <CardHeader>
               <CardTitle>Product Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Care Level:</span>
-                <span className="font-medium">{product.careLevel}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Size:</span>
-                <span className="font-medium">{product.size}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Category:</span>
-                <span className="font-medium">{product.category.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Recommended Age:</span>
-                <span className="font-medium">
-                  {product.category.minAge === 0
-                    ? "All ages"
-                    : `${product.category.minAge}+ years`}
-                </span>
-              </div>
+              {product.category && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Category:</span>
+                  <span className="font-medium">{product.category.name}</span>
+                </div>
+              )}
+              {product.age && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Age:</span>
+                  <span className="font-medium">{product.age} months</span>
+                </div>
+              )}
+              {product.gender && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Gender:</span>
+                  <span className="font-medium capitalize">{product.gender}</span>
+                </div>
+              )}
+              {product.image_urls && product.image_urls.length > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Images:</span>
+                  <span className="font-medium">{product.image_urls.length} image{product.image_urls.length !== 1 ? 's' : ''}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 

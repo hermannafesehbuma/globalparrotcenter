@@ -20,17 +20,20 @@ CREATE TABLE IF NOT EXISTS products (
     name VARCHAR(150) NOT NULL,
     description TEXT,
     price DECIMAL(10,2) NOT NULL,
-    image_url VARCHAR(255),
+    image_urls TEXT[],  -- array of image URLs
     age INT,
-    gender VARCHAR(20) CHECK (gender IN ('male', 'female', 'unknown')) DEFAULT 'unknown',
-    temperament TEXT,
-    care_level VARCHAR(50),
-    size VARCHAR(50),
-    popularity INT DEFAULT 0,
-    highlights TEXT[],
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    gender parrot_gender,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create parrot_gender enum type if it doesn't exist
+-- Note: For existing databases, you may need to migrate existing 'unknown' values to NULL
+-- or update them to 'male' or 'female' before applying this change
+DO $$ BEGIN
+    CREATE TYPE parrot_gender AS ENUM ('male', 'female', 'pairs');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- Orders Table
 CREATE TABLE IF NOT EXISTS orders (

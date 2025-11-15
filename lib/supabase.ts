@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient as createBrowserClientSSR } from '@supabase/ssr'
 import { Database } from './database.types'
 
 // Helper to get Supabase URL
@@ -22,6 +23,7 @@ function getSupabaseStorageUrl(): string {
 }
 
 // Client-side Supabase client (for use in client components)
+// Uses SSR-compatible client that stores sessions in cookies
 export const createBrowserClient = () => {
   const url = getSupabaseUrl()
   const key = getSupabaseAnonKey()
@@ -34,7 +36,22 @@ export const createBrowserClient = () => {
     return createClient<Database>('', '')
   }
   
-  return createClient<Database>(url, key)
+  // Use SSR browser client which handles cookies properly
+  return createBrowserClientSSR<Database>(url, key, {
+    cookies: {
+      getAll() {
+        return document.cookie.split('; ').map(cookie => {
+          const [name, ...rest] = cookie.split('=')
+          return { name, value: rest.join('=') }
+        })
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          document.cookie = `${name}=${value}; ${options?.path ? `path=${options.path};` : ''} ${options?.maxAge ? `max-age=${options.maxAge};` : ''} ${options?.domain ? `domain=${options.domain};` : ''} ${options?.sameSite ? `samesite=${options.sameSite};` : ''} ${options?.secure ? 'secure;' : ''}`
+        })
+      },
+    },
+  })
 }
 
 // Create Supabase client for server-side usage (lazy initialization)

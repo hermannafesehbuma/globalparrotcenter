@@ -193,7 +193,7 @@ export default function TermsPage() {
               For questions about these Terms of Service, please contact us at:
             </p>
             <p>
-              <strong>Email:</strong> contact@globalparrotcenter.com
+              <strong>Email:</strong> parrotlovers04@gmail.com
             </p>
           </CardContent>
         </Card>

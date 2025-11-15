@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowRight, Filter, Search, ShoppingCart, Loader2 } from "lucide-react";
-import { categories } from "@/lib/data";
 import { getProducts } from "@/lib/api/products";
 import { getCategories } from "@/lib/api/categories";
 import { ProductWithCategory } from "@/lib/database.types";
@@ -68,8 +67,7 @@ export default function ProductsPage() {
   };
 
   const [priceFilter, setPriceFilter] = useState<string>("all");
-  const [sizeFilter, setSizeFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<string>("popularity");
+  const [sortBy, setSortBy] = useState<string>("name");
 
   const filteredProducts = useMemo(() => {
     // Handle empty or undefined products array
@@ -77,6 +75,7 @@ export default function ProductsPage() {
       return [];
     }
     
+    // By default, show all parrots (products)
     let filtered: ProductWithCategory[] = [...products];
 
     // Search filter
@@ -84,15 +83,18 @@ export default function ProductsPage() {
       filtered = filtered.filter(
         (product) =>
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.description.toLowerCase().includes(searchQuery.toLowerCase())
+          product.description?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    // Category filter
+    // Category filter - only filter if a specific category is selected
     if (selectedCategory !== "all") {
-      filtered = filtered.filter(
-        (product) => product.category?.id === parseInt(selectedCategory) || product.category?.name?.toLowerCase() === selectedCategory.toLowerCase()
-      );
+      const categoryId = parseInt(selectedCategory);
+      if (!isNaN(categoryId)) {
+        filtered = filtered.filter(
+          (product) => product.category_id === categoryId
+        );
+      }
     }
 
     // Price filter
@@ -107,21 +109,19 @@ export default function ProductsPage() {
     }
 
     // Size filter
-    if (sizeFilter !== "all") {
-      filtered = filtered.filter((product) => product.size === sizeFilter);
-    }
+    // Size filter removed - size field no longer exists in schema
 
     // Sort
     filtered.sort((a, b) => {
-      if (sortBy === "popularity") return (b.popularity || 0) - (a.popularity || 0);
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
       if (sortBy === "name") return a.name.localeCompare(b.name);
-      return 0;
+      // Default: sort by name
+      return a.name.localeCompare(b.name);
     });
 
     return filtered;
-  }, [searchQuery, selectedCategory, priceFilter, sizeFilter, sortBy]);
+  }, [products, searchQuery, selectedCategory, priceFilter, sortBy]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -163,8 +163,8 @@ export default function ProductsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {categories && categories.length > 0 && categories.map((category) => (
-                <SelectItem key={category.id} value={category.slug}>
+              {dbCategories && dbCategories.length > 0 && dbCategories.map((category) => (
+                <SelectItem key={category.id} value={category.id.toString()}>
                   {category.name}
                 </SelectItem>
               ))}
@@ -182,19 +182,6 @@ export default function ProductsPage() {
               <SelectItem value="100-500">$100 - $500</SelectItem>
               <SelectItem value="500-1000">$500 - $1,000</SelectItem>
               <SelectItem value="over-1000">Over $1,000</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Size Filter */}
-          <Select value={sizeFilter} onValueChange={setSizeFilter}>
-            <SelectTrigger className="w-full md:w-[180px]">
-              <SelectValue placeholder="Size" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sizes</SelectItem>
-              <SelectItem value="Small">Small</SelectItem>
-              <SelectItem value="Medium">Medium</SelectItem>
-              <SelectItem value="Large">Large</SelectItem>
             </SelectContent>
           </Select>
 
@@ -241,9 +228,9 @@ export default function ProductsPage() {
             >
               <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
                 <div className="relative h-64 w-full bg-muted">
-                  {product.image_url ? (
+                  {product.image_urls && product.image_urls.length > 0 ? (
                     <Image
-                      src={product.image_url}
+                      src={product.image_urls[0]}
                       alt={product.name}
                       fill
                       className="object-cover"
@@ -281,19 +268,12 @@ export default function ProductsPage() {
                 </CardHeader>
                 <CardContent className="flex-1">
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                    {product.description}
+                    {product.description || "No description available"}
                   </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {product.highlights.slice(0, 3).map((highlight) => (
-                      <Badge key={highlight} variant="secondary">
-                        {highlight}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>Size: {product.size}</span>
-                    <span>•</span>
-                    <span>Care: {product.careLevel}</span>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground mt-4">
+                    {product.age && <span>Age: {product.age} months</span>}
+                    {product.age && product.gender && <span>•</span>}
+                    {product.gender && <span>Gender: {product.gender}</span>}
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-2">
@@ -309,18 +289,12 @@ export default function ProductsPage() {
                         id: product.id,
                         name: product.name,
                         category_id: product.category_id,
-                        description: product.description || '',
+                        description: product.description || null,
                         price: product.price,
-                        image_url: product.image_url || '',
-                        age: product.age,
-                        gender: product.gender || "unknown" as const,
-                        temperament: product.temperament || '',
-                        care_level: product.care_level || 'Moderate',
-                        size: product.size || 'Medium',
-                        popularity: product.popularity || 0,
-                        highlights: (product.highlights as string[]) || [],
+                        image_urls: product.image_urls || null,
+                        age: product.age || null,
+                        gender: product.gender || null,
                         created_at: product.created_at,
-                        updated_at: product.updated_at,
                       };
                       addToCart(dbProduct);
                       setAddedItems(new Set([...addedItems, product.id]));

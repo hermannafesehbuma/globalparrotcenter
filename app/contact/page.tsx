@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Phone, MapPin, Send } from "lucide-react";
+import { Mail, MapPin, Send } from "lucide-react";
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -17,12 +17,31 @@ export default function ContactPage() {
     message: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log("Contact form submitted:", formData);
-    alert("Thank you for your message! We'll get back to you soon.");
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/send-contact-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        alert("Thank you for your message! We'll get back to you soon.");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      } else {
+        throw new Error('Failed to send message');
+      }
+    } catch (error) {
+      console.error("Error sending contact form:", error);
+      alert("Failed to send message. Please try again or contact us directly at parrotlovers04@gmail.com");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -101,9 +120,9 @@ export default function ContactPage() {
                   />
                 </div>
 
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
                   <Send className="mr-2 h-4 w-4" />
-                  Send Message
+                  {isSubmitting ? "Sending..." : "Send Message"}
                 </Button>
               </form>
             </CardContent>
@@ -130,21 +149,14 @@ export default function ContactPage() {
                 <div>
                   <p className="font-semibold">Email</p>
                   <a
-                    href="mailto:contact@globalparrotcenter.com"
+                    href="mailto:parrotlovers04@gmail.com"
                     className="text-muted-foreground hover:text-primary transition-colors"
                   >
-                    contact@globalparrotcenter.com
+                    parrotlovers04@gmail.com
                   </a>
                 </div>
               </div>
 
-              <div className="flex items-start gap-4">
-                <Phone className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <p className="font-semibold">Phone</p>
-                  <p className="text-muted-foreground">(555) 123-4567</p>
-                </div>
-              </div>
 
               <div className="flex items-start gap-4">
                 <MapPin className="h-5 w-5 text-primary mt-1" />

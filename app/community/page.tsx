@@ -115,14 +115,14 @@ export default function CommunityPage() {
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
-            { title: "Parrot Care", icon: "🦜", count: 24 },
-            { title: "Training Tips", icon: "🎓", count: 18 },
-            { title: "Health & Wellness", icon: "💚", count: 15 },
-            { title: "Breeding", icon: "🥚", count: 12 },
-            { title: "Nutrition", icon: "🥗", count: 20 },
-            { title: "Behavior", icon: "🧠", count: 16 },
-            { title: "Safety", icon: "🛡️", count: 10 },
-            { title: "Age Recommendations", icon: "👶", count: 14 },
+            { title: "Parrot Care", icon: "🦜", count: 24, slug: "parrot-care" },
+            { title: "Training Tips", icon: "🎓", count: 18, slug: "parrot-training-tips" },
+            { title: "Health & Wellness", icon: "💚", count: 15, slug: "health-wellness" },
+            { title: "Breeding", icon: "🥚", count: 12, slug: "breeding" },
+            { title: "Nutrition", icon: "🥗", count: 20, slug: "nutrition" },
+            { title: "Behavior", icon: "🧠", count: 16, slug: "parrot-behavior" },
+            { title: "Safety", icon: "🛡️", count: 10, slug: "safety" },
+            { title: "Age Recommendations", icon: "👶", count: 14, slug: "age-recommendations" },
           ].map((topic, index) => (
             <motion.div
               key={topic.title}
@@ -131,20 +131,22 @@ export default function CommunityPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-2xl mb-1">{topic.icon}</p>
-                      <p className="font-semibold">{topic.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {topic.count} posts
-                      </p>
+              <Link href={`/community/${topic.slug}`}>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-2xl mb-1">{topic.icon}</p>
+                        <p className="font-semibold">{topic.title}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {topic.count} posts
+                        </p>
+                      </div>
+                      <MessageCircle className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </Link>
             </motion.div>
           ))}
         </div>

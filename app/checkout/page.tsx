@@ -81,12 +81,44 @@ function CheckoutContent() {
       // Create order
       const order = await createOrder(orderData, orderItems);
 
+      // Send email notifications (both to admin and customer)
+      try {
+        await fetch('/api/send-order-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: order.id,
+            customerName: formData.customer_name,
+            customerEmail: formData.customer_email || undefined,
+            customerPhone: formData.customer_phone || undefined,
+            shippingAddress: {
+              line1: formData.shipping_address_line1,
+              line2: formData.shipping_address_line2 || undefined,
+              city: formData.city,
+              state: formData.state || undefined,
+              country: formData.country,
+              postalCode: formData.postal_code || undefined,
+            },
+            paymentMethod: formData.payment_option,
+            items: items.map((item) => ({
+              name: item.product.name,
+              quantity: item.quantity,
+              price: item.product.price,
+            })),
+            total: getTotalPrice(),
+            notes: formData.notes || undefined,
+          }),
+        });
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        // Don't fail the order if email fails
+      }
+
       // Clear cart
       clearCart();
 
-      // Redirect to success page or show success message
-      alert(`Order #${order.id} has been placed successfully! We will contact you soon.`);
-      router.push("/");
+      // Redirect to thank you page
+      router.push(`/thank-you?orderId=${order.id}`);
     } catch (error) {
       console.error("Error creating order:", error);
       alert("Failed to place order. Please try again.");
@@ -182,7 +214,7 @@ function CheckoutContent() {
                     onChange={(e) =>
                       setFormData({ ...formData, customer_phone: e.target.value })
                     }
-                    placeholder="(555) 123-4567"
+                    placeholder="Optional"
                   />
                 </div>
 
@@ -375,12 +407,18 @@ function CheckoutContent() {
                 );
                 return (
                   <div key={item.product.id} className="flex items-center gap-4">
-                    <div className="relative h-20 w-20 rounded-lg bg-muted overflow-hidden">
-                      <img
-                        src={item.product.image_url || "/api/placeholder/200/200"}
-                        alt={item.product.name}
-                        className="h-full w-full object-cover"
-                      />
+                    <div className="relative h-20 w-20 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                      {item.product.image_urls && item.product.image_urls.length > 0 ? (
+                        <img
+                          src={item.product.image_urls[0]}
+                          alt={item.product.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-muted-foreground text-xs">
+                          No Image
+                        </div>
+                      )}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold">{item.product.name}</h3>

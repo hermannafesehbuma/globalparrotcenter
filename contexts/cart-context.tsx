@@ -46,15 +46,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         (item) => item.product.id === product.id
       );
 
+      // For parrots, quantity should always be 1
+      const finalQuantity = 1;
+
       if (existingItem) {
-        return prevItems.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+        // If item already exists, don't add again (parrots are unique)
+        return prevItems;
       }
 
-      return [...prevItems, { product, quantity }];
+      return [...prevItems, { product, quantity: finalQuantity }];
     });
   };
 
@@ -70,9 +70,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // For parrots, quantity should always be 1
+    const finalQuantity = 1;
+
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
+        item.product.id === productId ? { ...item, quantity: finalQuantity } : item
       )
     );
   };

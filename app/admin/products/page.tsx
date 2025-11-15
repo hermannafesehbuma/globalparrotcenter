@@ -31,10 +31,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Upload, X } from "lucide-react";
 import { getProducts, createProduct, updateProduct, deleteProduct } from "@/lib/api/products";
 import { getCategories } from "@/lib/api/categories";
 import { Product, ProductInsert, Category } from "@/lib/database.types";
+import { createBrowserClient } from "@/lib/supabase";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -47,15 +48,13 @@ export default function ProductsPage() {
     category_id: "",
     description: "",
     price: "",
-    image_url: "",
     age: "",
-    gender: "unknown" as "male" | "female" | "unknown",
-    temperament: "",
-    care_level: "",
-    size: "",
-    popularity: "0",
-    highlights: "",
+    gender: "",
   });
+  const [images, setImages] = useState<string[]>([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   useEffect(() => {
     loadData();
@@ -100,15 +99,13 @@ export default function ProductsPage() {
         category_id: product.category_id?.toString() || "",
         description: product.description || "",
         price: product.price.toString(),
-        image_url: product.image_url || "",
         age: product.age?.toString() || "",
-        gender: product.gender,
-        temperament: product.temperament || "",
-        care_level: product.care_level || "",
-        size: product.size || "",
-        popularity: product.popularity.toString(),
-        highlights: product.highlights?.join(", ") || "",
+        gender: product.gender || "",
       });
+      // Set images array from product (using image_urls column)
+      const productImages = (product as any).image_urls || [];
+      setImages(productImages);
+      setImagePreviews(productImages);
     } else {
       setEditingProduct(null);
       setFormData({
@@ -116,45 +113,205 @@ export default function ProductsPage() {
         category_id: "",
         description: "",
         price: "",
-        image_url: "",
         age: "",
-        gender: "unknown",
-        temperament: "",
-        care_level: "",
-        size: "",
-        popularity: "0",
-        highlights: "",
+        gender: "",
       });
+      setImages([]);
+      setImagePreviews([]);
     }
+    setImageFiles([]);
     setIsDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingProduct(null);
+    setImageFiles([]);
+    setImagePreviews([]);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      const validFiles: File[] = [];
+      const previewPromises: Promise<string>[] = [];
+      
+      files.forEach((file) => {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          alert(`${file.name} is not an image file`);
+          return;
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          alert(`${file.name} size must be less than 5MB`);
+          return;
+        }
+        
+        validFiles.push(file);
+        
+        // Create preview promise
+        const previewPromise = new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+        });
+        previewPromises.push(previewPromise);
+      });
+      
+      // Wait for all previews to load
+      Promise.all(previewPromises).then((previews) => {
+        setImagePreviews([...imagePreviews, ...previews]);
+      });
+      
+      setImageFiles([...imageFiles, ...validFiles]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    const newFiles = [...imageFiles];
+    const newPreviews = [...imagePreviews];
+    const newImages = [...images];
+    
+    if (index < imageFiles.length) {
+      // Remove uploaded file
+      newFiles.splice(index, 1);
+      newPreviews.splice(index, 1);
+      setImageFiles(newFiles);
+      setImagePreviews(newPreviews);
+    } else {
+      // Remove existing image URL
+      const imageIndex = index - imageFiles.length;
+      newImages.splice(imageIndex, 1);
+      setImages(newImages);
+      setImagePreviews([...imagePreviews.slice(0, imageFiles.length), ...newImages]);
+    }
+  };
+
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    const supabase = createBrowserClient();
+    
+    // Get bucket name from environment variable (must be NEXT_PUBLIC_* for client-side)
+    // Default to 'parrots' if not set
+    const bucketName = (process.env.NEXT_PUBLIC_STORAGE_BUCKET || 'parrots').trim();
+    
+    if (!bucketName) {
+      throw new Error('Storage bucket name is not configured. Set NEXT_PUBLIC_STORAGE_BUCKET in your environment variables.');
+    }
+    
+    // Generate unique filename
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = fileName;
+    
+    // First, verify the bucket exists by trying to list it
+    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+    
+    if (listError) {
+      console.error('Error listing buckets:', listError);
+    } else {
+      const bucketExists = buckets?.some(b => b.name === bucketName);
+      if (!bucketExists) {
+        console.warn(`Bucket "${bucketName}" not found. Available buckets:`, buckets?.map(b => b.name).join(', ') || 'none');
+      }
+    }
+    
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: false
+      });
+    
+    if (error) {
+      console.error('Error uploading image:', error);
+      console.error('Bucket name used:', bucketName);
+      console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      
+      // Provide helpful error message
+      if (error.message?.includes('Bucket not found') || error.message?.includes('not found')) {
+        throw new Error(
+          `Bucket "${bucketName}" not found. Please verify:\n` +
+          `1. The bucket name is correct (currently using: "${bucketName}")\n` +
+          `2. The bucket exists in your Supabase project\n` +
+          `3. Set NEXT_PUBLIC_STORAGE_BUCKET in .env.local if your bucket has a different name\n` +
+          `4. Check that RLS policies allow uploads`
+        );
+      }
+      
+      throw new Error(`Failed to upload image: ${error.message}`);
+    }
+    
+    // Construct the public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+    
+    return publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields according to schema
+    // Schema: name VARCHAR(150) NOT NULL, price DECIMAL(10,2) NOT NULL
+    if (!formData.name || formData.name.trim().length === 0) {
+      alert("Product name is required");
+      return;
+    }
+    
+    if (formData.name.length > 150) {
+      alert("Product name must be 150 characters or less");
+      return;
+    }
+    
+    if (!formData.price || isNaN(parseFloat(formData.price)) || parseFloat(formData.price) <= 0) {
+      alert("Valid price is required (must be greater than 0)");
+      return;
+    }
+    
+    // Validate age is a positive integer (in months)
+    if (formData.age && (isNaN(parseInt(formData.age)) || parseInt(formData.age) < 0)) {
+      alert("Age must be a positive number in months");
+      return;
+    }
+    
+    
     try {
-      const highlightsArray = formData.highlights
-        .split(",")
-        .map((h) => h.trim())
-        .filter((h) => h.length > 0);
+      // Upload images if new files were selected
+      let uploadedImageUrls: string[] = [...images];
+      
+      if (imageFiles.length > 0) {
+        setUploadingImage(true);
+        try {
+          const uploadPromises = imageFiles.map(file => uploadImageToStorage(file));
+          const urls = await Promise.all(uploadPromises);
+          uploadedImageUrls = [...uploadedImageUrls, ...urls];
+        } catch (uploadError: any) {
+          alert(`Failed to upload images: ${uploadError.message}`);
+          setUploadingImage(false);
+          return;
+        }
+        setUploadingImage(false);
+      }
 
+      // Build product data matching schema exactly
+      // Schema fields: id, category_id, name, description, price, image_urls (TEXT[]), age, gender (parrot_gender), created_at
       const productData: ProductInsert = {
-        name: formData.name,
+        name: formData.name.trim(),
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
-        description: formData.description || null,
+        description: formData.description.trim() || null,
         price: parseFloat(formData.price),
-        image_url: formData.image_url || null,
-        age: formData.age ? parseInt(formData.age) : null,
-        gender: formData.gender,
-        temperament: formData.temperament || null,
-        care_level: formData.care_level || null,
-        size: formData.size || null,
-        popularity: parseInt(formData.popularity) || 0,
-        highlights: highlightsArray.length > 0 ? highlightsArray : null,
+        image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null, // TEXT[] array of image URLs
+        age: formData.age ? parseInt(formData.age) : null, // Age in months (INT)
+        // Handle gender: convert empty string to null, ensure it's a valid enum value or null
+        gender: formData.gender && formData.gender.trim() !== '' 
+          ? (formData.gender as 'male' | 'female' | 'pairs')
+          : null, // parrot_gender enum ('male', 'female', 'pairs')
       };
 
       if (editingProduct) {
@@ -165,9 +322,10 @@ export default function ProductsPage() {
 
       await loadData();
       handleCloseDialog();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving product:", error);
-      alert("Failed to save product");
+      const errorMessage = error?.message || error?.toString() || "Failed to save product";
+      alert(`Failed to save product: ${errorMessage}`);
     }
   };
 
@@ -276,85 +434,39 @@ export default function ProductsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="age">Age (months/years)</Label>
+                    <Label htmlFor="age">Age (months) *</Label>
                     <Input
                       id="age"
                       type="number"
+                      min="0"
                       value={formData.age}
                       onChange={(e) =>
                         setFormData({ ...formData, age: e.target.value })
                       }
-                      placeholder="Optional"
+                      placeholder="e.g., 12 (for 12 months)"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Enter age in months (e.g., 12 = 1 year, 6 = 6 months)
+                    </p>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="gender">Gender</Label>
                     <Select
                       value={formData.gender}
-                      onValueChange={(value: "male" | "female" | "unknown") =>
+                      onValueChange={(value) =>
                         setFormData({ ...formData, gender: value })
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="male">Male</SelectItem>
                         <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="unknown">Unknown</SelectItem>
+                        <SelectItem value="pairs">Pairs (Male & Female)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="care_level">Care Level</Label>
-                    <Select
-                      value={formData.care_level}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, care_level: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select care level" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Easy">Easy</SelectItem>
-                        <SelectItem value="Moderate">Moderate</SelectItem>
-                        <SelectItem value="Advanced">Advanced</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="size">Size</Label>
-                    <Select
-                      value={formData.size}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, size: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Small">Small</SelectItem>
-                        <SelectItem value="Medium">Medium</SelectItem>
-                        <SelectItem value="Large">Large</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="image_url">Image URL</Label>
-                  <Input
-                    id="image_url"
-                    type="url"
-                    value={formData.image_url}
-                    onChange={(e) =>
-                      setFormData({ ...formData, image_url: e.target.value })
-                    }
-                    placeholder="https://example.com/image.jpg"
-                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description</Label>
@@ -369,41 +481,51 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="temperament">Temperament</Label>
-                  <Textarea
-                    id="temperament"
-                    value={formData.temperament}
-                    onChange={(e) =>
-                      setFormData({ ...formData, temperament: e.target.value })
-                    }
-                    placeholder="Temperament description..."
-                    rows={2}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="highlights">Highlights (comma-separated)</Label>
-                  <Input
-                    id="highlights"
-                    value={formData.highlights}
-                    onChange={(e) =>
-                      setFormData({ ...formData, highlights: e.target.value })
-                    }
-                    placeholder="Friendly, Easy to train, Colorful"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="popularity">Popularity Score</Label>
-                  <Input
-                    id="popularity"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.popularity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, popularity: e.target.value })
-                    }
-                    placeholder="0"
-                  />
+                  <Label htmlFor="images">Product Images</Label>
+                  <div className="space-y-2">
+                    {imagePreviews.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2">
+                        {imagePreviews.map((preview, index) => (
+                          <div key={index} className="relative w-full h-32 border rounded-lg overflow-hidden">
+                            <img
+                              src={preview}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-1 right-1 h-6 w-6 p-0"
+                              onClick={() => removeImage(index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Input
+                        id="images"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageSelect}
+                        disabled={uploadingImage}
+                        className="flex-1"
+                      />
+                    </div>
+                    {uploadingImage && (
+                      <p className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Upload className="h-4 w-4 animate-pulse" />
+                        Uploading images...
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      You can upload multiple images. Images will be uploaded to Supabase Storage.
+                    </p>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -442,9 +564,8 @@ export default function ProductsPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Size</TableHead>
-                      <TableHead>Care Level</TableHead>
-                      <TableHead>Popularity</TableHead>
+                      <TableHead>Age (months)</TableHead>
+                      <TableHead>Gender</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -456,9 +577,8 @@ export default function ProductsPage() {
                           {categories.find((c) => c.id === product.category_id)?.name || "-"}
                         </TableCell>
                         <TableCell>${product.price.toFixed(2)}</TableCell>
-                        <TableCell>{product.size || "-"}</TableCell>
-                        <TableCell>{product.care_level || "-"}</TableCell>
-                        <TableCell>{product.popularity}</TableCell>
+                        <TableCell>{product.age ? `${product.age} months` : "-"}</TableCell>
+                        <TableCell>{product.gender || "-"}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button

@@ -95,11 +95,11 @@ export function Footer() {
             <h3 className="text-lg font-semibold mb-4">Connect</h3>
             <div className="space-y-3">
               <a
-                href="mailto:contact@globalparrotcenter.com"
+                href="mailto:parrotlovers04@gmail.com"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Mail className="h-4 w-4" />
-                contact@globalparrotcenter.com
+                parrotlovers04@gmail.com
               </a>
               <div className="flex gap-4 mt-4">
                 <a

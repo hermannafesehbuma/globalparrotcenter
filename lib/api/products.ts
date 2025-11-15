@@ -23,8 +23,8 @@ export async function getProducts(options?: {
   // If filtering by slug, first get the category ID
   let categoryId = options?.categoryId
   if (options?.categorySlug && !categoryId) {
-    const { data: category } = await supabase
-      .from('categories')
+    const { data: category } = await (supabase
+      .from('categories') as any)
       .select('id')
       .eq('slug', options.categorySlug)
       .single()
@@ -79,7 +79,8 @@ export async function getProducts(options?: {
     query = query.limit(options.limit)
   }
 
-  let { data, error } = await query
+  const resultAny: any = await query
+  let { data, error } = resultAny
 
   // If the join fails, try fetching products without the join
   if (error) {
@@ -123,7 +124,7 @@ export async function getProducts(options?: {
       simpleQuery.limit(options.limit)
     }
     
-    const simpleResult = await simpleQuery
+    const simpleResult: any = await simpleQuery
     
     if (simpleResult.error) {
       console.error('Error fetching products:', simpleResult.error)
@@ -157,7 +158,7 @@ export async function getProducts(options?: {
   } else {
     // Transform the data to match ProductWithCategory type
     // Supabase returns categories in different formats depending on the query
-    data = (data || []).map((product: any) => {
+    data = (data as any[] || []).map((product: any) => {
       // Try different possible property names for the category
       const category = product.categories || 
                       product.category || 
@@ -197,9 +198,10 @@ export async function getProductById(
 
   // Transform the data to match ProductWithCategory type
   if (data) {
+    const anyData: any = data as any
     return {
-      ...data,
-      category: (data as any).categories || null
+      ...anyData,
+      category: anyData.categories || null
     } as ProductWithCategory
   }
 
@@ -237,8 +239,8 @@ export async function createProduct(product: ProductInsert): Promise<Product> {
     gender: product.gender || null,
   }
   
-  const { data, error } = await supabase
-    .from('products')
+  const { data, error } = await (supabase
+    .from('products') as any)
     .insert(insertData)
     .select()
     .single()
@@ -284,8 +286,10 @@ export async function updateProduct(
     updateData.age = updates.age
   }
   if (updates.gender !== undefined) {
-    // Convert empty string to null for gender
-    updateData.gender = updates.gender === '' ? null : updates.gender
+    updateData.gender =
+      typeof updates.gender === 'string' && updates.gender.trim() === ''
+        ? null
+        : updates.gender
   }
   
   // Ensure we have at least one field to update
@@ -293,8 +297,8 @@ export async function updateProduct(
     throw new Error('No fields provided to update')
   }
   
-  const { data, error } = await supabase
-    .from('products')
+  const { data, error } = await (supabase
+    .from('products') as any)
     .update(updateData)
     .eq('id', id)
     .select()
@@ -343,8 +347,8 @@ export async function updateProduct(
  */
 export async function deleteProduct(id: number): Promise<void> {
   const supabase = createBrowserClient()
-  const { error } = await supabase
-    .from('products')
+  const { error } = await (supabase
+    .from('products') as any)
     .delete()
     .eq('id', id)
 

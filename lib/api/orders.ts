@@ -7,12 +7,15 @@ import {
   OrderItemInsert,
 } from '../database.types'
 
+// Type for order items without order_id (it's added by the function)
+type OrderItemInput = Omit<OrderItemInsert, 'order_id' | 'id' | 'created_at'>
+
 /**
  * Create a new order with order items
  */
 export async function createOrder(
   orderData: OrderInsert,
-  items: OrderItemInsert[]
+  items: OrderItemInput[]
 ): Promise<OrderWithItems> {
   const supabase = createBrowserClient()
   
@@ -56,8 +59,8 @@ export async function createOrder(
   }
   
   // Start a transaction by creating the order first
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
+  const { data: order, error: orderError } = await (supabase
+    .from('orders') as any)
     .insert(orderDataWithStatus)
     .select()
     .single()
@@ -119,8 +122,8 @@ export async function createOrder(
     }
   })
 
-  const { data: createdItems, error: itemsError } = await supabase
-    .from('order_items')
+  const { data: createdItems, error: itemsError } = await (supabase
+    .from('order_items') as any)
     .insert(orderItems)
     .select(`
       *,
@@ -133,7 +136,7 @@ export async function createOrder(
     
     // Try to delete the order if items fail (cleanup)
     try {
-      await supabase.from('orders').delete().eq('id', order.id)
+      await (supabase.from('orders') as any).delete().eq('id', order.id)
     } catch (deleteError) {
       console.error('Failed to cleanup order after items error:', deleteError)
     }
@@ -168,8 +171,8 @@ export async function getOrders(options?: {
   offset?: number
 }): Promise<OrderWithItems[]> {
   const supabase = createBrowserClient()
-  let query = supabase
-    .from('orders')
+  let query = (supabase
+    .from('orders') as any)
     .select(`
       *,
       order_items:order_items(
@@ -206,8 +209,8 @@ export async function getOrders(options?: {
  */
 export async function getOrderById(id: number): Promise<OrderWithItems | null> {
   const supabase = createBrowserClient()
-  const { data, error } = await supabase
-    .from('orders')
+  const { data, error } = await (supabase
+    .from('orders') as any)
     .select(`
       *,
       order_items:order_items(
@@ -261,8 +264,8 @@ export async function updateOrderStatus(
   status: string
 ): Promise<Order> {
   const supabase = createBrowserClient()
-  const { data, error } = await supabase
-    .from('orders')
+  const { data, error } = await (supabase
+    .from('orders') as any)
     .update({ status })
     .eq('id', id)
     .select()
@@ -284,8 +287,8 @@ export async function updateOrder(
   updates: OrderUpdate
 ): Promise<Order> {
   const supabase = createBrowserClient()
-  const { data, error } = await supabase
-    .from('orders')
+  const { data, error } = await (supabase
+    .from('orders') as any)
     .update(updates)
     .eq('id', id)
     .select()
@@ -304,8 +307,8 @@ export async function updateOrder(
  */
 export async function deleteOrder(id: number): Promise<void> {
   const supabase = createBrowserClient()
-  const { error } = await supabase
-    .from('orders')
+  const { error } = await (supabase
+    .from('orders') as any)
     .delete()
     .eq('id', id)
 
@@ -325,8 +328,8 @@ export async function getOrderStats(): Promise<{
   completedOrders: number
 }> {
   const supabase = createBrowserClient()
-  const { data: orders, error } = await supabase
-    .from('orders')
+  const { data: orders, error } = await (supabase
+    .from('orders') as any)
     .select('status, total_amount')
 
   if (error) {
@@ -336,11 +339,14 @@ export async function getOrderStats(): Promise<{
 
   const totalOrders = orders?.length || 0
   const totalRevenue =
-    orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0
+    (orders as { total_amount: number; status: string }[] | undefined)?.reduce(
+      (sum: number, order: { total_amount: number }) => sum + Number(order.total_amount),
+      0
+    ) || 0
   const pendingOrders =
-    orders?.filter((order) => order.status === 'pending').length || 0
+    (orders as { status: string }[] | undefined)?.filter((order) => order.status === 'pending').length || 0
   const completedOrders =
-    orders?.filter((order) => order.status === 'delivered').length || 0
+    (orders as { status: string }[] | undefined)?.filter((order) => order.status === 'delivered').length || 0
 
   return {
     totalOrders,

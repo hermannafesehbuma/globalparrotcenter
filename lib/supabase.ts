@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createBrowserClient as createBrowserClientSSR } from '@supabase/ssr'
 import { Database } from './database.types'
 
@@ -22,9 +22,40 @@ function getSupabaseStorageUrl(): string {
   return process.env.SUPABASE_STORAGE_URL || getSupabaseUrl()
 }
 
+// Cookie-based storage for browser client to work with middleware
+class CookieStorage {
+  getItem(key: string): string | null {
+    if (typeof document === 'undefined') return null
+    const name = key + '='
+    const decodedCookie = decodeURIComponent(document.cookie)
+    const ca = decodedCookie.split(';')
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i]
+      while (c.charAt(0) === ' ') {
+        c = c.substring(1)
+      }
+      if (c.indexOf(name) === 0) {
+        return c.substring(name.length, c.length)
+      }
+    }
+    return null
+  }
+
+  setItem(key: string, value: string): void {
+    if (typeof document === 'undefined') return
+    // Set cookie with proper attributes for auth tokens
+    document.cookie = `${key}=${value}; path=/; max-age=31536000; SameSite=Lax`
+  }
+
+  removeItem(key: string): void {
+    if (typeof document === 'undefined') return
+    document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`
+  }
+}
+
 // Client-side Supabase client (for use in client components)
-// Uses SSR-compatible client that stores sessions in cookies
-export const createBrowserClient = () => {
+// Uses cookie-based storage so middleware can read the session
+export const createBrowserClient = (): SupabaseClient<Database> => {
   const url = getSupabaseUrl()
   const key = getSupabaseAnonKey()
   
@@ -36,20 +67,24 @@ export const createBrowserClient = () => {
     return createClient<Database>('', '')
   }
   
-  // Use SSR browser client which handles cookies properly
-  return createBrowserClientSSR<Database>(url, key, {
-    cookies: {
-      getAll() {
-        return document.cookie.split('; ').map(cookie => {
-          const [name, ...rest] = cookie.split('=')
-          return { name, value: rest.join('=') }
-        })
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    // Server-side fallback
+    return createClient<Database>(url, key, {
+      auth: {
+        persistSession: false,
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          document.cookie = `${name}=${value}; ${options?.path ? `path=${options.path};` : ''} ${options?.maxAge ? `max-age=${options.maxAge};` : ''} ${options?.domain ? `domain=${options.domain};` : ''} ${options?.sameSite ? `samesite=${options.sameSite};` : ''} ${options?.secure ? 'secure;' : ''}`
-        })
-      },
+    })
+  }
+  
+  // Use createClient with cookie-based storage so middleware can read it
+  // This ensures proper Database type inference while using cookies
+  return createClient<Database>(url, key, {
+    auth: {
+      storage: new CookieStorage(),
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
     },
   })
 }

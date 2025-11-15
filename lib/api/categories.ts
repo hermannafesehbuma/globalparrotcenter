@@ -1,14 +1,15 @@
 import { createBrowserClient } from '../supabase'
-import { Category, CategoryInsert, CategoryUpdate } from '../database.types'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import { Database, Category, CategoryInsert, CategoryUpdate } from '../database.types'
 
 /**
  * Get all categories
  * Schema: id, name (VARCHAR(100) NOT NULL), description (TEXT), created_at, updated_at
  */
 export async function getCategories(): Promise<Category[]> {
-  const supabase = createBrowserClient()
-  const { data, error } = await supabase
-    .from('categories')
+  const supabase: SupabaseClient<Database> = createBrowserClient()
+  const { data, error } = await (supabase
+    .from('categories') as any)
     .select('*')
     .order('name', { ascending: true })
 
@@ -24,9 +25,9 @@ export async function getCategories(): Promise<Category[]> {
  * Get a single category by ID
  */
 export async function getCategoryById(id: number): Promise<Category | null> {
-  const supabase = createBrowserClient()
-  const { data, error } = await supabase
-    .from('categories')
+  const supabase: SupabaseClient<Database> = createBrowserClient()
+  const { data, error } = await (supabase
+    .from('categories') as any)
     .select('*')
     .eq('id', id)
     .single()
@@ -45,7 +46,7 @@ export async function getCategoryById(id: number): Promise<Category | null> {
  * Auto-generated: id (SERIAL), created_at, updated_at
  */
 export async function createCategory(category: CategoryInsert): Promise<Category> {
-  const supabase = createBrowserClient()
+  const supabase: SupabaseClient<Database> = createBrowserClient()
   
   // Validate required fields according to schema
   if (!category.name || category.name.trim().length === 0) {
@@ -56,12 +57,13 @@ export async function createCategory(category: CategoryInsert): Promise<Category
     throw new Error('Category name must be 100 characters or less')
   }
   
-  const { data, error } = await supabase
-    .from('categories')
-    .insert({
-      name: category.name.trim(),
-      description: category.description?.trim() || null,
-    })
+  const insertData: CategoryInsert = {
+    name: category.name.trim(),
+    description: category.description?.trim() || null,
+  }
+  const { data, error } = await (supabase
+    .from('categories') as any)
+    .insert([insertData])
     .select()
     .single()
 
@@ -80,7 +82,7 @@ export async function updateCategory(
   id: number,
   updates: CategoryUpdate
 ): Promise<Category> {
-  const supabase = createBrowserClient()
+  const supabase: SupabaseClient<Database> = createBrowserClient()
   
   // Validate name if provided
   if (updates.name !== undefined) {
@@ -107,8 +109,8 @@ export async function updateCategory(
   // The database will handle updated_at automatically if there's a trigger
   // If no trigger exists, we can manually set it, but let's try without first
   
-  const { data, error } = await supabase
-    .from('categories')
+  const { data, error } = await (supabase
+    .from('categories') as any)
     .update(updateData)
     .eq('id', id)
     .select()
@@ -132,9 +134,9 @@ export async function updateCategory(
  * Delete a category
  */
 export async function deleteCategory(id: number): Promise<void> {
-  const supabase = createBrowserClient()
-  const { error } = await supabase
-    .from('categories')
+  const supabase: SupabaseClient<Database> = createBrowserClient()
+  const { error } = await (supabase
+    .from('categories') as any)
     .delete()
     .eq('id', id)
 

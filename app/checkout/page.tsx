@@ -138,8 +138,8 @@ function CheckoutContent() {
           transition={{ duration: 0.5 }}
           className="text-center"
         >
-          <h1 className="text-4xl font-bold tracking-tight mb-2">Checkout</h1>
-          <p className="text-muted-foreground mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2">Checkout</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mb-6">
             Your cart is empty. Add items to your cart to proceed.
           </p>
           <Button asChild>
@@ -151,19 +151,20 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 sm:py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
+        className="mb-6 sm:mb-8"
       >
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Checkout</h1>
-        <p className="text-muted-foreground mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2">Checkout</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Complete your purchase and join the parrot community
         </p>
       </motion.div>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
         {/* Order Form */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -249,7 +250,7 @@ function CheckoutContent() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="city">City *</Label>
                     <Input
@@ -260,6 +261,7 @@ function CheckoutContent() {
                         setFormData({ ...formData, city: e.target.value })
                       }
                       placeholder="New York"
+                      className="w-full"
                     />
                   </div>
 
@@ -272,11 +274,12 @@ function CheckoutContent() {
                         setFormData({ ...formData, state: e.target.value })
                       }
                       placeholder="NY"
+                      className="w-full"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="country">Country *</Label>
                     <Input
@@ -287,6 +290,7 @@ function CheckoutContent() {
                         setFormData({ ...formData, country: e.target.value })
                       }
                       placeholder="USA"
+                      className="w-full"
                     />
                   </div>
 
@@ -299,6 +303,7 @@ function CheckoutContent() {
                         setFormData({ ...formData, postal_code: e.target.value })
                       }
                       placeholder="10001"
+                      className="w-full"
                     />
                   </div>
                 </div>
@@ -313,40 +318,41 @@ function CheckoutContent() {
                         payment_option: value as PaymentOption,
                       })
                     }
+                    className="space-y-3"
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="cashapp" id="cashapp" />
-                      <Label htmlFor="cashapp" className="font-normal cursor-pointer">
+                      <Label htmlFor="cashapp" className="font-normal cursor-pointer text-sm sm:text-base">
                         CashApp
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="apple pay" id="applepay" />
-                      <Label htmlFor="applepay" className="font-normal cursor-pointer">
+                      <Label htmlFor="applepay" className="font-normal cursor-pointer text-sm sm:text-base">
                         Apple Pay
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="venmo" id="venmo" />
-                      <Label htmlFor="venmo" className="font-normal cursor-pointer">
+                      <Label htmlFor="venmo" className="font-normal cursor-pointer text-sm sm:text-base">
                         Venmo
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="chime" id="chime" />
-                      <Label htmlFor="chime" className="font-normal cursor-pointer">
+                      <Label htmlFor="chime" className="font-normal cursor-pointer text-sm sm:text-base">
                         Chime
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="bank transfer" id="bank" />
-                      <Label htmlFor="bank" className="font-normal cursor-pointer">
+                      <Label htmlFor="bank" className="font-normal cursor-pointer text-sm sm:text-base">
                         Bank Transfer
                       </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="zelle" id="zelle" />
-                      <Label htmlFor="zelle" className="font-normal cursor-pointer">
+                      <Label htmlFor="zelle" className="font-normal cursor-pointer text-sm sm:text-base">
                         Zelle
                       </Label>
                     </div>
@@ -406,8 +412,8 @@ function CheckoutContent() {
                   (c) => c.id === item.product.category_id
                 );
                 return (
-                  <div key={item.product.id} className="flex items-center gap-4">
-                    <div className="relative h-20 w-20 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                  <div key={item.product.id} className="flex items-start gap-3 sm:gap-4">
+                    <div className="relative h-16 w-16 sm:h-20 sm:w-20 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                       {item.product.image_urls && item.product.image_urls.length > 0 ? (
                         <img
                           src={item.product.image_urls[0]}
@@ -420,9 +426,9 @@ function CheckoutContent() {
                         </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold">{item.product.name}</h3>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm sm:text-base line-clamp-2">{item.product.name}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         {category?.name || "Uncategorized"}
                       </p>
                       {category && (
@@ -431,11 +437,11 @@ function CheckoutContent() {
                         </div>
                       )}
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold text-sm sm:text-base">
                         ${item.product.price.toFixed(2)}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground">
                         Qty: {item.quantity}
                       </p>
                     </div>
@@ -462,12 +468,12 @@ function CheckoutContent() {
 
           <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
-                <AlertCircle className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100 text-base sm:text-lg">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                 Important Notes
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-amber-800 dark:text-amber-200 space-y-2">
+            <CardContent className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 space-y-2">
               <p>
                 • Live birds require special handling and shipping arrangements
               </p>

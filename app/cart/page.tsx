@@ -41,20 +41,20 @@ export default function CartPage() {
   const total = getTotalPrice();
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-4 sm:py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Shopping Cart</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight mb-2">Shopping Cart</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Review your items before checkout
         </p>
       </motion.div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
+      <div className="grid gap-6 sm:gap-8 lg:grid-cols-3">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => {
@@ -68,9 +68,9 @@ export default function CartPage() {
                 transition={{ duration: 0.5 }}
               >
                 <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex gap-4">
-                      <div className="relative h-24 w-24 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                  <CardContent className="pt-4 sm:pt-6">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="relative h-32 w-32 sm:h-24 sm:w-24 rounded-lg bg-muted overflow-hidden flex-shrink-0 mx-auto sm:mx-0">
                         <Image
                           src={item.product.image_urls && item.product.image_urls.length > 0 ? item.product.image_urls[0] : "/api/placeholder/200/200"}
                           alt={item.product.name}
@@ -78,8 +78,8 @@ export default function CartPage() {
                           className="object-cover"
                         />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base sm:text-lg mb-1 line-clamp-2">
                           {item.product.name}
                         </h3>
                         {category && (
@@ -87,23 +87,24 @@ export default function CartPage() {
                             <AgeSafetyWidget category={category} />
                           </div>
                         )}
-                        <p className="text-sm text-muted-foreground mb-3">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2 hidden sm:block">
                           {item.product.description || "No description available"}
                         </p>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <div className="flex items-center gap-3">
                             <span className="text-sm text-muted-foreground">
                               Quantity: {item.quantity}
                             </span>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-lg font-bold">
+                          <div className="flex items-center justify-between sm:justify-end gap-4">
+                            <span className="text-base sm:text-lg font-bold">
                               ${(item.product.price * item.quantity).toFixed(2)}
                             </span>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => removeFromCart(item.product.id)}
+                              className="shrink-0"
                             >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -117,8 +118,8 @@ export default function CartPage() {
             );
           })}
 
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={clearCart}>
+          <div className="flex justify-center sm:justify-end">
+            <Button variant="outline" onClick={clearCart} className="w-full sm:w-auto">
               Clear Cart
             </Button>
           </div>
@@ -131,7 +132,7 @@ export default function CartPage() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="sticky top-24">
+            <Card className="lg:sticky lg:top-24">
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
               </CardHeader>
